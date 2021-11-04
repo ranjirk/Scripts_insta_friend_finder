@@ -1,108 +1,157 @@
+import instaloader, time, os, json
 import tkinter as ttk
 from tkinter import filedialog
 from tkinter import *
 from PIL import Image, ImageTk
 from tkinter.font import Font
-import instaloader, time
-# import dp
-# from dp import disp
+from datetime import datetime
 
-class UI1 :
+class UI :
 	def __init__(self):
+		self.jDic, self.flag = self.load_json()
+		if self.flag:
+			self.instaObj = instaloader.Instaloader()
+			self.val_dict = {	"location" : "", "followers" : [], "imgPath" : self.jDic["wrong"], "cred" : False}
 
-		self.val_dict = { "username" : "", "location" : "" }
-		self.top = ttk.Tk()
-		self.top.geometry("1200x720")
-		self.username_var = ttk.StringVar()
-		self.password_var = ttk.StringVar()
-		self.rain_Frame=(self.top)
-		self.rain_Frame.grid()
+			self.top = ttk.Tk()
+			self.top.geometry("1200x720")
+
+			self.username_var = ttk.StringVar()
+			self.password_var = ttk.StringVar()
+			self.rain_Frame=(self.top)
+			self.rain_Frame.grid()
+			self.loginPage()
+			# self.top.wm_attributes('-transparentcolor', '#ab23ff')
+			self.top.mainloop()
+
+	def loginPage(self):
+
+		self.image1 = Image.open(self.jDic["bgimage"])
+		self.image2 = Image.open(self.jDic["login"])
+		self.image3 = Image.open(self.jDic["username"])
+		self.image4 = Image.open(self.jDic["password"])
+
+		# self.loadimage = Image.open('.\\data\\assets\\loading.png')
+		self.bgImage 	= ImageTk.PhotoImage(self.image1)
+		self.loginImage = ImageTk.PhotoImage(self.image2)
+		self.labelImage1 = ImageTk.PhotoImage(self.image3)
+		self.labelImage2 = ImageTk.PhotoImage(self.image4)
 
 		self.canvas = ttk.Canvas(self.rain_Frame, width=1200, height=720)
 		self.canvas.grid(row=0, column=0, columnspan=4, rowspan=4)
+		self.canvas.create_image( 1, 1, image=self.bgImage, anchor="nw")
 
-		self.canvas1 = ttk.Canvas(self.rain_Frame, width=1000, height=665)
-
-
-		self.top.wm_attributes('-transparentcolor', '#ab23ff')
-
-		self.bg_image = Image.open('.\\data\\assets\\bgimage.png')
-		self.button_image = Image.open('.\\data\\assets\\button_image.png')
-		self.label1_image = Image.open('.\\data\\assets\\label1.png')
-		self.label2_image = Image.open('.\\data\\assets\\label2.png')
-		self.loadimage = Image.open('.\\data\\assets\\loading.png')
-
-		self.image1 = ImageTk.PhotoImage(self.bg_image)
-		self.image2 = ImageTk.PhotoImage(self.button_image)
-		self.image3 = ImageTk.PhotoImage(self.label1_image)
-		self.image4 = ImageTk.PhotoImage(self.label2_image)
-		self.image5 = ImageTk.PhotoImage(self.loadimage)
-
-		self.canvas.create_image( 1, 1, image=self.image1, anchor="nw")
-
-		self.label1 = ttk.Label(self.top, image=self.image3)
-		self.label2 = ttk.Label(self.top, image=self.image4)
+		self.usernameLabel = ttk.Label(self.top, image=self.labelImage1)
+		self.passwordLabel = ttk.Label(self.top, image=self.labelImage2)
 		self.usernameField = ttk.Entry(self.top, textvariable=self.username_var, font = Font(family='Consolas', slant='italic'), justify='center')
 		self.passwordField = ttk.Entry(self.top, textvariable=self.password_var, font = Font(family='Consolas', slant='italic'), show="*", justify='center')
-		self.button1 = ttk.Button(self.top, image=self.image2, command=self.profiling)
+		self.loginButton = ttk.Button(self.top, image=self.loginImage, command=self.options)
 
-		self.label1.grid(column=0, row=0)
-		self.label2.grid(column=0, row=1)
+		self.usernameLabel.grid(column=0, row=0)
+		self.passwordLabel.grid(column=0, row=1)
 		self.usernameField.grid(column=1, row=0)
 		self.passwordField.grid(column=1, row=1)
-		self.button1.grid(column=3, row=2)
+		self.loginButton.grid(column=3, row=2)
 
-		self.top.mainloop()
-
-	def profiling(self):
+	def options(self):
 		self.username = str(self.usernameField.get())
 		self.password = str(self.passwordField.get())
-		self.location = str(filedialog.askopenfilename())
-		self.label1.destroy()
-		self.label2.destroy()
+		# self.location = str(filedialog.askopenfilename())
+
+		try :
+			self.instaObj.login(self.username, self.password)
+			self.profile = instaloader.Profile.from_username(self.instaObj.context, self.username)
+			self.val_dict["imgPath"] = self.jDic["correct"]
+			self.val_dict["cred"] = True
+		except Exception as e:
+			pass
+		self.msgDisplay()
+
+		self.usernameLabel.destroy()
+		self.passwordLabel.destroy()
 		self.usernameField.destroy()
 		self.passwordField.destroy()
-		self.button1.destroy()
+		self.loginButton.destroy()
 
-		self.canvas1.grid(row=0, column=0, columnspan=4, rowspan=4)
-		self.canvas1.create_image(0, 0, image=self.image5, anchor="nw")
-		time.sleep(2)
-		# ____________________________________________________________________
+		self.getfollowers = ImageTk.PhotoImage(Image.open(self.jDic["getFollowers"]))
+		self.cmpfollowers = ImageTk.PhotoImage(Image.open(self.jDic["cmpFollowers"]))
+		self.cmpprofile = ImageTk.PhotoImage(Image.open(self.jDic["cmpProfile"]))
+		self.existMatch = ImageTk.PhotoImage(Image.open(self.jDic["existingMatch"]))
 
+		self.option1 = ttk.Button(self.top, image=self.getfollowers, command=self.getFollowers)
+		self.option2 = ttk.Button(self.top, image=self.cmpfollowers, command=self.matchFollowerface)
+		self.option3 = ttk.Button(self.top, image=self.cmpprofile,   command=self.matchPosts)
+		self.option4 = ttk.Button(self.top, image=self.existMatch,   command=self.existingMatch)
 
-		self.loadObj = instaloader.Instaloader()
-		self.loadObj.login(self.username, self.password)
-		self.profile = instaloader.Profile.from_username(self.loadObj.context, self.username)
-		self.followers_list = [ self.followee.username for self.followee in self.profile.get_followers() ]
-		# self.canvas1.destroy()
-		# self.top1.destroy()
-		print("______________________________________________________________________")
-		print(self.followers_list)
-		print("______________________________________________________________________")
-		print(len(self.followers_list))
+		self.option1.grid(column=1, row=1)
+		self.option2.grid(column=1, row=2)
+		self.option3.grid(column=1, row=3)
 
+	def msgDisplay(self):
+		self.msgImage = ImageTk.PhotoImage(Image.open(self.val_dict["imgPath"]))
+		self.message = ttk.Label(self.top, image=self.msgImage)
+		time.sleep(3)
+		if not self.val_dict["cred"] :
+			print("\n\n Problem in credentials...")
+			self.top.destroy()
 
-class UI2:
-	def __init__(self):
-		self.top2 = ttk.Tk()
-		self.top2.geometry("1550x700")
+	def getFollowers(self):
+		print("getFollowers selected")
+		self.val_dict["followers"] = [ self.followee.username for self.followee in self.profile.get_followers() ]
+		self.f = open("followersList.txt", 'w')
+		for self.username in self.val_dict["followers"] :
+			self.f.write(self.username+'\n')
+		self.f.close()
 
+	def matchFollowerface(self):
+		print("matchFollowerface selected")
+		self.val_dict["location"] = str(filedialog.askopenfilename())
 
+		self.localImage = ImageTk.PhotoImage(Image.open(self.val_dict["location"]))
+		self.proceedImage = ImageTk.PhotoImage(Image.open(self.jDic["proceed"]))
 
+		self.imageLabel = ttk.Label(self.top, image=self.localImage)
+		self.proceedButton = ttk.Button(self.top, image=self.proceedImage, command=self.downloadFollowersDp)
 
-		# self.loadObj = instaloader.Instaloader()
-		# self.loadObj.login(self.username, self.password)
-		# self.profile = instaloader.Profile.from_username(self.loadObj.context, self.username)
+		self.imageLabel.grid(column=1, row=1)
+		self.proceedButton.grid(column=1, row=2)
 
-		# self.followers_list = [ self.followee.username for self.followee in self.profile.get_followers() ]
+	def matchPosts(self):
+		print("matchPosts selected")
+		pass
+	def existingMatch(self):
+		pass
 
+	def downloadFollowersDp(self):
+		self.getFollowers()
+		os.chdir('profiles\\')
+		for self.username in self.val_dict["followers"] :
+			print(self.username)
+			self.instaObj.download_profile(self.username ,profile_pic_only=True)
 
-		print(self.followers_list)
-		print("__________________")
-		print(len(self.followers_list))
+	def load_json(self):
+		try :
 
-obj = UI1()
+			with open('values.json', 'r') as self.f :
+				self.data_json = json.load(self.f)
+				return self.data_json, True
+		except Exception as e :
+			print("Error !!! def load_json()")
+			self.error_logger("Exception at reading data.json file", e)
+			return False, False
 
+	def error_logger(self, txt, exceptioN):
+		try :
+			self.txt, self.excpn,self.valuesList = txt, str(exceptioN), []
+			self.valuesList.append('\n    Time | ' + str(datetime.now()) + ' |')
+			self.valuesList.append('\n         | ' + self.txt + " |")
+			self.valuesList.append('\n         | Type ' + str(type(self.excpn)) + ' |')
+			self.valuesList.append('\n         | Exception ' + self.excpn + ' |')
+			self.f2 = open('ErrorLog.txt')
+			for self.line in len(self.valuesList) :
+				self.f2.write(self.valuesList[self.line])
+			self.f2.close()
+		except Exception as e:
+			print("||| Error !!!\n Exception in data at error_logger() |||")
 
-
-
+obj = UI()
