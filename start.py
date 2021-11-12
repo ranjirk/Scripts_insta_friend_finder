@@ -1,17 +1,21 @@
-import instaloader, time, os, json
+import instaloader, time, os, json, matchface
 import tkinter as ttk
 from tkinter import filedialog
 from tkinter import *
 from PIL import Image, ImageTk
 from tkinter.font import Font
 from datetime import datetime
+from matchface import matcher as FR
 
 class UI :
 	def __init__(self):
 		self.jDic, self.flag = self.load_json()
 		if self.flag:
 			self.instaObj = instaloader.Instaloader()
-			self.val_dict = {	"location" : "", "followers" : [], "imgPath" : self.jDic["wrong"], "cred" : False}
+			self.val_dict = { "authImage" : self.jDic["wrong"]}
+			self.flagVals = {"cred":False, "getFollowers":False, "followersDp":False }
+			self.userdata = { "username":"", "uploadImagePath":"", "followersList":[] }
+			self.cur_path = os.getcwd()
 
 			self.top = ttk.Tk()
 			self.top.geometry("1200x720")
@@ -26,16 +30,10 @@ class UI :
 
 	def loginPage(self):
 
-		self.image1 = Image.open(self.jDic["bgimage"])
-		self.image2 = Image.open(self.jDic["login"])
-		self.image3 = Image.open(self.jDic["username"])
-		self.image4 = Image.open(self.jDic["password"])
-
-		# self.loadimage = Image.open('.\\data\\assets\\loading.png')
-		self.bgImage 	= ImageTk.PhotoImage(self.image1)
-		self.loginImage = ImageTk.PhotoImage(self.image2)
-		self.labelImage1 = ImageTk.PhotoImage(self.image3)
-		self.labelImage2 = ImageTk.PhotoImage(self.image4)
+		self.bgImage 	= ImageTk.PhotoImage(Image.open(self.jDic["bgimage"]))
+		self.loginImage = ImageTk.PhotoImage(Image.open(self.jDic["login"]))
+		self.labelImage1 = ImageTk.PhotoImage(Image.open(self.jDic["username"]))
+		self.labelImage2 = ImageTk.PhotoImage(Image.open(self.jDic["password"]))
 
 		self.canvas = ttk.Canvas(self.rain_Frame, width=1200, height=720)
 		self.canvas.grid(row=0, column=0, columnspan=4, rowspan=4)
@@ -56,13 +54,12 @@ class UI :
 	def options(self):
 		self.username = str(self.usernameField.get())
 		self.password = str(self.passwordField.get())
-		# self.location = str(filedialog.askopenfilename())
-
+		self.userdata["username"] = self.username
 		try :
 			self.instaObj.login(self.username, self.password)
 			self.profile = instaloader.Profile.from_username(self.instaObj.context, self.username)
-			self.val_dict["imgPath"] = self.jDic["correct"]
-			self.val_dict["cred"] = True
+			self.val_dict["authImage"] = self.jDic["correct"]
+			self.flagVals["cred"] = True
 		except Exception as e:
 			pass
 		self.msgDisplay()
@@ -88,50 +85,71 @@ class UI :
 		self.option3.grid(column=1, row=3)
 
 	def msgDisplay(self):
-		self.msgImage = ImageTk.PhotoImage(Image.open(self.val_dict["imgPath"]))
+		self.msgImage = ImageTk.PhotoImage(Image.open(self.val_dict["authImage"]))
 		self.message = ttk.Label(self.top, image=self.msgImage)
 		time.sleep(3)
-		if not self.val_dict["cred"] :
+		if not self.flagVals["cred"] :
 			print("\n\n Problem in credentials...")
 			self.top.destroy()
-
+# ________________________________________________________________________________________________
 	def getFollowers(self):
-		print("getFollowers selected")
-		self.val_dict["followers"] = [ self.followee.username for self.followee in self.profile.get_followers() ]
-		self.f = open("followersList.txt", 'w')
-		for self.username in self.val_dict["followers"] :
-			self.f.write(self.username+'\n')
+		self.flagVals["getFollowers"] = True
+		print("getFollowers() called")
+		self.userdata["followers"] = [ self.followee.username for self.followee in self.profile.get_followers() ]
+		self.f = open(f"followersList_{self.userdata["username"]}.txt", 'w')
+		self.f.write(self.userdata["username"])
+		[self.f.write('    '+self.followerUsername+'\n') for self.followerUsername in self.userdata["followers"]]
 		self.f.close()
-
 	def matchFollowerface(self):
-		print("matchFollowerface selected")
-		self.val_dict["location"] = str(filedialog.askopenfilename())
-
-		self.localImage = ImageTk.PhotoImage(Image.open(self.val_dict["location"]))
+		self.userdata["uploadImagePath"] = str(filedialog.askopenfilename())
+		self.localImage = ImageTk.PhotoImage(Image.open(self.userdata["uploadImagePath"]))
 		self.proceedImage = ImageTk.PhotoImage(Image.open(self.jDic["proceed"]))
-
 		self.imageLabel = ttk.Label(self.top, image=self.localImage)
-		self.proceedButton = ttk.Button(self.top, image=self.proceedImage, command=self.downloadFollowersDp)
-
+		self.proceedButton = ttk.Button(self.top, image=self.proceedImage, command=self.matchIt)
 		self.imageLabel.grid(column=1, row=1)
 		self.proceedButton.grid(column=1, row=2)
-
 	def matchPosts(self):
-		print("matchPosts selected")
 		pass
 	def existingMatch(self):
 		pass
+# ________________________________________________________________________________________________
+	def matchIt(self):
+		if not self.flagVals["followersDp"]: # followers dp are not downloaded
+			self.dpFlag = self.downloadFollowersDp()
+		if self.flagVals["followersDp"] :
+			self.foundFace, self.foundFacePath, self.followerID = FR.f1(self.userdata)
+			print("Face found ", self.followerID)
+		else :
+			pass # show error message in UI
 
 	def downloadFollowersDp(self):
-		self.getFollowers()
-		os.chdir('profiles\\')
-		for self.username in self.val_dict["followers"] :
-			print(self.username)
-			self.instaObj.download_profile(self.username ,profile_pic_only=True)
-
+		if not self.flagVals["getFollowers"]:
+			self.getFollowers()
+		# ___________________ Checks if profile username folder exist ______________________
+		try :
+			if not os.path.exists(f"{self.cur_path}\\{self.userdata["username"]}"):
+				os.mkdir(f"{self.cur_path}\\{self.userdata["username"]}")
+			else :
+				pass # folder in this username already exist
+			self.flagVals["folderOk"] = True
+		except Exception as e:
+			self.error_logger("Exception at creating username folder", e)
+		# __________________________________________________________________________________
+		if self.flagVals["folderOk"] :
+			os.chdir(f"{self.userdata["username"]}\\")
+			for self.username in self.userdata["followers"] :
+				# print(self.username)
+				self.instaObj.download_profile(self.username ,profile_pic_only=True)
+			os.chdir("..")
+			print("\nAll followers' dp downloaded\n")
+			self.flagVals["followersDp"] = True
+			return True
+		else :
+			self.error_logger(f"Could not create folder named {self.userdata['username']} ", "_")
+			return False
+# ________________________________________________________________________________________________
 	def load_json(self):
 		try :
-
 			with open('values.json', 'r') as self.f :
 				self.data_json = json.load(self.f)
 				return self.data_json, True
