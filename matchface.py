@@ -28,10 +28,6 @@ class matcher:
 			self.result = face_recognition.compare_faces([self.uploadImgEncoding], self.followerImgEnoding)
 
 			if self.result:
-				print("________________________________")
-				print("Match found   : ", self.follower)
-				print("File location : ", self.jpgFiles[0])
-				print("________________________________")
 				self.returnValues["result"] = self.result
 				self.returnValues["file"] = self.jpgFiles[0]
 				self.returnValues["follower"] = self.follower

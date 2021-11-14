@@ -88,6 +88,7 @@ class UI :
 	def msgDisplay(self):
 		self.msgImage = ImageTk.PhotoImage(Image.open(self.val_dict["authImage"]))
 		self.message = ttk.Label(self.top, image=self.msgImage)
+		self.message.grid(column=1, row=1)
 		time.sleep(3)
 		if not self.flagVals["cred"] :
 			print("\n Problem in credentials...\n")
@@ -130,7 +131,13 @@ class UI :
 		if self.dpFlag :
 			self.FR = matcher()
 			print(f"\nUser data {self.userdata}\n")
-			self.foundFace, self.foundFacePath, self.followerID = self.FR.f1(self.userdata)
+			self.returnValus = self.FR.f1(self.userdata)
+			if self.returnValus["result"]:
+				print("Results")
+				print("___________________")
+				print(self.returnValus["file"], self.returnValus["follower"])
+				print("___________________")				
+				self.foundMatch(self.returnValus)
 		else :
 			print("\n|Exception at creating username folder|\n")
 	def downloadFollowersDp(self):
@@ -149,6 +156,14 @@ class UI :
 			self.error_logger("Exception at creating username folder", e)
 			return False
 		return True
+	def foundMatch(self, data):
+		self.imagepath, self.ID = data["file"], data["follower"]
+		print(f"\nPath of match image {self.imagepath}\n")
+		self.mf = ImageTk.PhotoImage(Image.open(self.imagepath))
+		self.foundimage = ttk.Label(self.top, image=self.mf)
+		self.foundText  = ttk.Label(self.top, text="Match found")
+		self.foundimage.grid(column=1, row=1)
+		self.foundText.grid(column=1, row=1)
 # ________________________________________________________________________________________________
 	def load_json(self):
 		try :
