@@ -1,11 +1,13 @@
-import instaloader, time, os, json, matchface
+import instaloader, time, os, json, cv2
 import tkinter as ttk
+# import matchface
+# from matchface import matcher
+
 from tkinter import filedialog
 from tkinter import *
 from PIL import Image, ImageTk
 from tkinter.font import Font
 from datetime import datetime
-from matchface import matcher
 
 class UI :
 	def __init__(self):
@@ -13,16 +15,18 @@ class UI :
 		if self.flag:
 			self.instaObj = instaloader.Instaloader()
 			self.val_dict = { "authImage" : self.jDic["wrong"]}
-			self.flagVals = {"cred":False, "getFollowers":False, "followersDp":False }
-			self.userdata = { "username":"", "uploadImagePath":"", "followers":[] }
+			self.flagVals = {"cred":False, "getFollowers":False, "followersDp":False, "resize":False }
+			self.userdata = { "username":"", "uploadImagePath":"", "followers":[], "cred":"" }
 			self.cur_path = os.getcwd()
 
 			self.top = ttk.Tk()
-			self.top.geometry("1200x720")
+			self.screen_width, self.screen_height  = self.top.winfo_screenwidth(), self.top.winfo_screenheight()
+			self.width, self.height  = 650, int(self.screen_height - 50)
+			self.resize_images()
+			self.top.geometry(f"{self.width}x{self.height}")
 
-			self.username_var = ttk.StringVar()
-			self.password_var = ttk.StringVar()
-			self.rain_Frame=(self.top)
+			self.username_var, self.password_var = ttk.StringVar(), ttk.StringVar()
+			self.rain_Frame = (self.top)
 			self.rain_Frame.grid()
 			self.loginPage()
 			# self.top.wm_attributes('-transparentcolor', '#ab23ff')
@@ -30,15 +34,14 @@ class UI :
 
 	def loginPage(self):
 
-		self.bgImage 	= ImageTk.PhotoImage(Image.open(self.jDic["bgimage"]))
-		self.loginImage = ImageTk.PhotoImage(Image.open(self.jDic["login"]))
-		self.labelImage1 = ImageTk.PhotoImage(Image.open(self.jDic["username"]))
-		self.labelImage2 = ImageTk.PhotoImage(Image.open(self.jDic["password"]))
+		self.bgImage 	 = ImageTk.PhotoImage(Image.open(self.jDic["bg_image"]))
+		self.loginImage  = ImageTk.PhotoImage(Image.open(self.jDic["login_button_image"]))
+		self.labelImage1 = ImageTk.PhotoImage(Image.open(self.jDic["username_button_image"]))
+		self.labelImage2 = ImageTk.PhotoImage(Image.open(self.jDic["password_button_image"]))
 
-		self.canvas = ttk.Canvas(self.rain_Frame, width=1200, height=720)
-		self.canvas.grid(row=0, column=0, columnspan=4, rowspan=4)
+		self.canvas = ttk.Canvas(self.rain_Frame, width=self.width, height=self.height)
+		self.canvas.grid(row=0, column=0, columnspan=2, rowspan=4)
 		self.canvas.create_image( 1, 1, image=self.bgImage, anchor="nw")
-
 		self.usernameLabel = ttk.Label(self.top, image=self.labelImage1)
 		self.passwordLabel = ttk.Label(self.top, image=self.labelImage2)
 		self.usernameField = ttk.Entry(self.top, textvariable=self.username_var, font = Font(family='Consolas', slant='italic'), justify='center')
@@ -49,53 +52,58 @@ class UI :
 		self.passwordLabel.grid(column=0, row=1)
 		self.usernameField.grid(column=1, row=0)
 		self.passwordField.grid(column=1, row=1)
-		self.loginButton.grid(column=3, row=2)
+		self.loginButton.grid(column=0, row=2, columnspan=2)
 
 	def options(self):
+		# __________________________ Login page __________________________ {
 		self.username = str(self.usernameField.get())
 		self.password = str(self.passwordField.get())
 		self.userdata["username"] = self.username
 		try :
+			print(f">> Logging {self.userdata['username']} in ...")
 			self.instaObj.login(self.username, self.password)
+			self.userdata["cred"] = self.password
 			self.profile = instaloader.Profile.from_username(self.instaObj.context, self.username)
 			self.val_dict["authImage"] = self.jDic["correct"]
 			self.flagVals["cred"] = True
-			print(f"\nLogged in {self.userdata['username']}\n")
+			print("\n>> Login in successful |\n")
+			if self.wrongLabel.winfo_exists():
+				self.wrongLabel.destroy()
 		except Exception as e:
-			pass
-		self.msgDisplay()
+			print("\n*** Login unsuccessful ! ***\n")
+			self.error_logger("Exception at Credentials ", e)
+			self.wrongimage = ImageTk.PhotoImage(Image.open(self.jDic["wrong"]))
+			self.wrongLabel = ttk.Label(self.top, image=self.wrongimage)
+			self.wrongLabel.grid(column=0, row=3, columnspan=2)
+		# self.msgDisplay()
+		# __________________________ Login page __________________________ }
+		# ________________________________________________________________
+		# _______________________ Successful login _______________________ {
+		else :
+			self.usernameLabel.destroy()
+			self.passwordLabel.destroy()
+			self.usernameField.destroy()
+			self.passwordField.destroy()
+			self.loginButton.destroy()
 
-		self.usernameLabel.destroy()
-		self.passwordLabel.destroy()
-		self.usernameField.destroy()
-		self.passwordField.destroy()
-		self.loginButton.destroy()
+			self.getfollowers = ImageTk.PhotoImage(Image.open(self.jDic["getFollowers"]))
+			self.cmpfollowers = ImageTk.PhotoImage(Image.open(self.jDic["cmpFollowers"]))
+			self.cmpprofile = ImageTk.PhotoImage(Image.open(self.jDic["cmpProfile"]))
+			self.existMatch = ImageTk.PhotoImage(Image.open(self.jDic["existingMatch"]))
 
-		self.getfollowers = ImageTk.PhotoImage(Image.open(self.jDic["getFollowers"]))
-		self.cmpfollowers = ImageTk.PhotoImage(Image.open(self.jDic["cmpFollowers"]))
-		self.cmpprofile = ImageTk.PhotoImage(Image.open(self.jDic["cmpProfile"]))
-		self.existMatch = ImageTk.PhotoImage(Image.open(self.jDic["existingMatch"]))
+			self.option1 = ttk.Button(self.top, image=self.getfollowers, command=self.getFollowers)
+			self.option2 = ttk.Button(self.top, image=self.cmpfollowers, command=self.matchFollowerface)
+			self.option3 = ttk.Button(self.top, image=self.cmpprofile,   command=self.matchPosts)
+			self.option4 = ttk.Button(self.top, image=self.existMatch,   command=self.existingMatch)
 
-		self.option1 = ttk.Button(self.top, image=self.getfollowers, command=self.getFollowers)
-		self.option2 = ttk.Button(self.top, image=self.cmpfollowers, command=self.matchFollowerface)
-		self.option3 = ttk.Button(self.top, image=self.cmpprofile,   command=self.matchPosts)
-		self.option4 = ttk.Button(self.top, image=self.existMatch,   command=self.existingMatch)
+			self.option1.grid(column=0, row=1, columnspan=2)
+			self.option2.grid(column=0, row=2, columnspan=2)
+			self.option3.grid(column=0, row=3, columnspan=2)
+		# _______________________ Successful login _______________________ }	
 
-		self.option1.grid(column=1, row=1)
-		self.option2.grid(column=1, row=2)
-		self.option3.grid(column=1, row=3)
-
-	def msgDisplay(self):
-		self.msgImage = ImageTk.PhotoImage(Image.open(self.val_dict["authImage"]))
-		self.message = ttk.Label(self.top, image=self.msgImage)
-		self.message.grid(column=1, row=1)
-		time.sleep(3)
-		if not self.flagVals["cred"] :
-			print("\n Problem in credentials...\n")
-			self.top.destroy()
 # ________________________________________________________________________________________________
 	def getFollowers(self): # Option 1
-		print("\ngetFollowers() Started\n")
+		print("\nListing Followers ...")
 		if not os.path.exists(f"followersList_{self.userdata['username']}.txt"):
 			self.flagVals["getFollowers"] = True
 			self.userdata["followers"] = [ self.followee.username for self.followee in self.profile.get_followers() ]
@@ -103,23 +111,30 @@ class UI :
 			[self.f.write(self.followerUsername+'\n') for self.followerUsername in self.userdata["followers"]]
 			self.f.close()
 		else:
-			print(f"Followers list text file exist for {self.userdata['username']}")
+			print(f"Followers list\'s text file already exist for {self.userdata['username']}")
+			print(f"Delete followersList_{self.userdata['username']}.txt file & rerun the program to get updated list of followers")
 			self.ff = open(f"followersList_{self.userdata['username']}.txt", "r")
 			self.txtData = self.ff.read()
 			self.ff.close()
 			self.userdata["followers"] = " ".join(self.txtData.split("\n")).split()
 			self.flagVals["getFollowers"] = True
-		print("\ngetFollowers() ended\n")
+		print("\nFollowers listed\n")
+
 	def matchFollowerface(self): # Option 2
+		self.option1.destroy()
+		self.option2.destroy()
+		self.option3.destroy()
+
 		self.tempPath = str(filedialog.askopenfilename())
 		self.userdata["uploadImagePath"] = self.tempPath.replace("/", "\\")
 
 		self.localImage = ImageTk.PhotoImage(Image.open(self.userdata["uploadImagePath"]))
 		self.proceedImage = ImageTk.PhotoImage(Image.open(self.jDic["proceed"]))
 		self.imageLabel = ttk.Label(self.top, image=self.localImage)
-		self.proceedButton = ttk.Button(self.top, image=self.proceedImage, command=self.matchIt)
-		self.imageLabel.grid(column=1, row=1)
-		self.proceedButton.grid(column=1, row=2)
+		# self.proceedButton = ttk.Button(self.top, image=self.proceedImage, command=self.matchIt)
+		self.proceedButton = ttk.Button(self.top, image=self.proceedImage)
+		self.imageLabel.grid(column=0, row=1, columnspan=2)
+		self.proceedButton.grid(column=0, row=2, columnspan=2)
 	def matchPosts(self): # Option 3
 		print("Match Posts selected")
 		pass
@@ -129,13 +144,12 @@ class UI :
 	def matchIt(self):
 		self.dpFlag = self.downloadFollowersDp()
 		if self.dpFlag :
-			self.FR = matcher()
-			print(f"\nUser data {self.userdata}\n")
-			self.returnValus = self.FR.f1(self.userdata)
+			self.FR = matcher(self.userdata, self.instaObj)
+			self.returnValus = self.FR.f1()
 			if self.returnValus["result"]:
 				print("Results")
 				print("___________________")
-				print(self.returnValus["file"], self.returnValus["follower"])
+				print(self.returnValus["follower"])
 				print("___________________")				
 				self.foundMatch(self.returnValus)
 		else :
@@ -158,7 +172,7 @@ class UI :
 		return True
 	def foundMatch(self, data):
 		self.imagepath, self.ID = data["file"], data["follower"]
-		print(f"\nPath of match image {self.imagepath}\n")
+		# print(f"\nPath of match image {self.imagepath}\n")
 		self.mf = ImageTk.PhotoImage(Image.open(self.imagepath))
 		self.foundimage = ttk.Label(self.top, image=self.mf)
 		self.foundText  = ttk.Label(self.top, text="Match found")
@@ -174,19 +188,32 @@ class UI :
 			print("Error !!! def load_json()")
 			self.error_logger("Exception at reading data.json file", e)
 			return False, False
-
+# ________________________________________________________________________________________________
 	def error_logger(self, txt, exceptioN):
 		try :
-			self.txt, self.excpn,self.valuesList = txt, str(exceptioN), []
-			self.valuesList.append('\n    Time | ' + str(datetime.now()) + ' |')
-			self.valuesList.append('\n         | ' + self.txt + " |")
-			self.valuesList.append('\n         | Type ' + str(type(self.excpn)) + ' |')
-			self.valuesList.append('\n         | Exception ' + self.excpn + ' |')
-			self.f2 = open('ErrorLog.txt')
-			for self.line in len(self.valuesList) :
+			self.txt, self.excpn,self.valuesList = txt, str(type(exceptioN)), []
+			self.valuesList = [	'\n\n| ' + self.txt, "\n| " + str(datetime.now()), "\n| " + self.excpn]
+			self.f2 = open('ErrorLog.txt', 'a+')
+			for self.line in range(len(self.valuesList)) :
 				self.f2.write(self.valuesList[self.line])
 			self.f2.close()
 		except Exception as e:
 			print("||| Error !!!\n Exception in data at error_logger() |||")
 # ________________________________________________________________________________________________
+	def resize_images(self):
+
+		self.image_org = cv2.imread(self.jDic['vector_path'])
+		self.resized = cv2.resize(self.image_org, (self.width, self.height))
+		cv2.imwrite(self.jDic['bg_image'], self.resized)
+# ________________________________________________________________________________________________
+	# def msgDisplay(self):
+	# 	self.msgImage = ImageTk.PhotoImage(Image.open(self.val_dict["authImage"]))
+	# 	self.message = ttk.Label(self.top, image=self.msgImage)
+	# 	self.message.grid(column=1, row=1)
+	# 	time.sleep(3)
+	# 	if not self.flagVals["cred"] :
+	# 		print("\n Problem in credentials...\n")
+	# 		self.top.destroy()
+# ________________________________________________________________________________________________
+
 obj = UI()

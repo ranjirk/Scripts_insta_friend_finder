@@ -1,14 +1,15 @@
 {
-	"bgimage" : ".\\data\\assets\\bgimage.png",
-	"login" 	: ".\\data\\assets\\login.jpg",
-	"upload" 	: ".\\data\\assets\\upload.jpg",
-	"username" 	: ".\\data\\assets\\username.jpg",
-	"password" 	: ".\\data\\assets\\password.jpg",
+	"bg_image" 		: ".\\data\\assets\\bg_image.jpg",
+	"login_button_image" 	: ".\\data\\assets\\login_button_image.jpg",
+	"upload_button_image" 	: ".\\data\\assets\\upload_button_image.jpg",
+	"username_button_image" 	: ".\\data\\assets\\username_button_image.jpg",
+	"password_button_image" 	: ".\\data\\assets\\password_button_image.jpg",
 	"wrong" 	: ".\\data\\assets\\wrong.jpg",
 	"correct" 	: ".\\data\\assets\\correct.jpg",
 	"getFollowers" 	: ".\\data\\assets\\getFollowers.jpg",
 	"cmpFollowers" 	: ".\\data\\assets\\cmpFollowers.jpg",
 	"cmpProfile" 	: ".\\data\\assets\\cmpProfile.jpg",
 	"existingMatch" : ".\\data\\assets\\existingMatch.jpg",
-	"proceed" 		: ".\\data\\assets\\proceed.jpg"
+	"proceed" 		: ".\\data\\assets\\proceed.jpg",
+	"vector_path"	: ".\\data\\vector\\bg_image.jpg"
 }
