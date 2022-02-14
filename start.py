@@ -1,4 +1,4 @@
-import instaloader, time, os, json, cv2
+import instaloader, time, os, json, cv2, logging
 import tkinter as ttk
 # import matchface
 # from matchface import matcher
@@ -18,7 +18,7 @@ class UI :
 			self.flagVals = {"cred":False, "getFollowers":False, "followersDp":False, "resize":False }
 			self.userdata = { "username":"", "uploadImagePath":"", "followers":[], "cred":"" }
 			self.cur_path = os.getcwd()
-
+			logging.basicConfig(level=logging.INFO)
 			self.top = ttk.Tk()
 			self.screen_width, self.screen_height  = self.top.winfo_screenwidth(), self.top.winfo_screenheight()
 			self.width, self.height  = 650, int(self.screen_height - 50)
@@ -58,19 +58,20 @@ class UI :
 		# __________________________ Login page __________________________ {
 		self.username = str(self.usernameField.get())
 		self.password = str(self.passwordField.get())
+		logging.info(f"Username \'{self.username}\' entered in text field.")
 		self.userdata["username"] = self.username
 		try :
-			print(f">> Logging {self.userdata['username']} in ...")
+			logging.info(f"Logging {self.userdata['username']} in ...")
 			self.instaObj.login(self.username, self.password)
 			self.userdata["cred"] = self.password
 			self.profile = instaloader.Profile.from_username(self.instaObj.context, self.username)
 			self.val_dict["authImage"] = self.jDic["correct"]
 			self.flagVals["cred"] = True
-			print("\n>> Login in successful |\n")
+			logging.info("\nLogin in successful |\n")
 			if self.wrongLabel.winfo_exists():
 				self.wrongLabel.destroy()
 		except Exception as e:
-			print("\n*** Login unsuccessful ! ***\n")
+			logging.info("\n*** Login unsuccessful ! ***\n")
 			self.error_logger("Exception at Credentials ", e)
 			self.wrongimage = ImageTk.PhotoImage(Image.open(self.jDic["wrong"]))
 			self.wrongLabel = ttk.Label(self.top, image=self.wrongimage)
@@ -103,7 +104,7 @@ class UI :
 
 # ________________________________________________________________________________________________
 	def getFollowers(self): # Option 1
-		print("\nListing Followers ...")
+		logging.info("\nListing Followers ...")
 		if not os.path.exists(f"followersList_{self.userdata['username']}.txt"):
 			self.flagVals["getFollowers"] = True
 			self.userdata["followers"] = [ self.followee.username for self.followee in self.profile.get_followers() ]
@@ -111,14 +112,14 @@ class UI :
 			[self.f.write(self.followerUsername+'\n') for self.followerUsername in self.userdata["followers"]]
 			self.f.close()
 		else:
-			print(f"Followers list\'s text file already exist for {self.userdata['username']}")
-			print(f"Delete followersList_{self.userdata['username']}.txt file & rerun the program to get updated list of followers")
+			logging.info(f"Followers list\'s text file already exist for {self.userdata['username']}")
+			logging.info(f"Delete followersList_{self.userdata['username']}.txt file & rerun the program to get updated list of followers")
 			self.ff = open(f"followersList_{self.userdata['username']}.txt", "r")
 			self.txtData = self.ff.read()
 			self.ff.close()
 			self.userdata["followers"] = " ".join(self.txtData.split("\n")).split()
 			self.flagVals["getFollowers"] = True
-		print("\nFollowers listed\n")
+		logging.info("\nFollowers listed\n")
 
 	def matchFollowerface(self): # Option 2
 		self.option1.destroy()
@@ -136,9 +137,10 @@ class UI :
 		self.imageLabel.grid(column=0, row=1, columnspan=2)
 		self.proceedButton.grid(column=0, row=2, columnspan=2)
 	def matchPosts(self): # Option 3
-		print("Match Posts selected")
+		logging.info("Match Posts selected")
 		pass
 	def existingMatch(self): # Option 4
+		logging.info("Existing Match selected")
 		pass
 # ________________________________________________________________________________________________
 	def matchIt(self):
@@ -147,32 +149,34 @@ class UI :
 			self.FR = matcher(self.userdata, self.instaObj)
 			self.returnValus = self.FR.f1()
 			if self.returnValus["result"]:
-				print("Results")
-				print("___________________")
-				print(self.returnValus["follower"])
-				print("___________________")				
+				logging.info("Results\n___________________\n", self.returnValus["follower"], "___________________")
 				self.foundMatch(self.returnValus)
 		else :
-			print("\n|Exception at creating username folder|\n")
+			logging.info("\n|Exception at creating username folder|\n")
 	def downloadFollowersDp(self):
 		if not self.flagVals["getFollowers"]:
 			self.getFollowers()
 		try :
+			logging.info("Downloading follower's Display pictures...")
 			if not os.path.exists(f"{self.cur_path}\\{self.userdata['username']}"):
 				os.mkdir(f"{self.cur_path}\\{self.userdata['username']}")
 				os.chdir(f"{self.userdata['username']}\\")
 				for self.username in self.userdata["followers"] :
+					logging.info(f"Downloading {self.username} 's display picture")
 					self.instaObj.download_profile(self.username ,profile_pic_only=True)
 				os.chdir("..")
 			else :
 				self.flagVals["followersDp"] = True
 		except Exception as e:
+			logging.info("Error in downloading followers display picture!\n Check downloadFollowersDp()")
 			self.error_logger("Exception at creating username folder", e)
 			return False
+		else:
+			logging.info("Followers Display pictures downloaded successfully")
 		return True
 	def foundMatch(self, data):
 		self.imagepath, self.ID = data["file"], data["follower"]
-		# print(f"\nPath of match image {self.imagepath}\n")
+		# logging.info(f"\nPath of match image {self.imagepath}\n")
 		self.mf = ImageTk.PhotoImage(Image.open(self.imagepath))
 		self.foundimage = ttk.Label(self.top, image=self.mf)
 		self.foundText  = ttk.Label(self.top, text="Match found")
@@ -181,11 +185,12 @@ class UI :
 # ________________________________________________________________________________________________
 	def load_json(self):
 		try :
+			logging.info("Opening \'values.json\' file")
 			with open('values.json', 'r') as self.f :
 				self.data_json = json.load(self.f)
 				return self.data_json, True
 		except Exception as e :
-			print("Error !!! def load_json()")
+			logging.info(f"Could not load \'values.json\' file at load_json()\n{e}")
 			self.error_logger("Exception at reading data.json file", e)
 			return False, False
 # ________________________________________________________________________________________________
@@ -198,13 +203,20 @@ class UI :
 				self.f2.write(self.valuesList[self.line])
 			self.f2.close()
 		except Exception as e:
-			print("||| Error !!!\n Exception in data at error_logger() |||")
+			logging.info("||| Error !!!\n Exception in data at error_logger() |||")
 # ________________________________________________________________________________________________
 	def resize_images(self):
+		logging.info("Background image resizing...")
+		try :
+			self.image_org = cv2.imread(self.jDic['vector_path'])
+			self.resized = cv2.resize(self.image_org, (self.width, self.height))
+			cv2.imwrite(self.jDic['bg_image'], self.resized)
+		except Exception as e:
+			logging.info("Error at resizing Background image\n Check resize_images()")
+			pass
+		else:
+			logging.info("Background image resized")
 
-		self.image_org = cv2.imread(self.jDic['vector_path'])
-		self.resized = cv2.resize(self.image_org, (self.width, self.height))
-		cv2.imwrite(self.jDic['bg_image'], self.resized)
 # ________________________________________________________________________________________________
 	# def msgDisplay(self):
 	# 	self.msgImage = ImageTk.PhotoImage(Image.open(self.val_dict["authImage"]))
